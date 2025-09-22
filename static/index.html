@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Geofence test</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0
+        }
+
+        #status {
+            position: absolute;
+            z-index: 5;
+            background: rgba(255, 255, 255, .9);
+            padding: 8px;
+            border-radius: 6px;
+            left: 8px;
+            top: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div id="status">Waiting...</div>
+    <div id="map"></div>
+
+    <script>
+        const GEOFENCE_CENTER = { lat: 28.458538, lng: 77.460090 }; // change as needed
+        const GEOFENCE_RADIUS_M = 150;
+        const CLIENT_TOKEN = 'AIzaSyB4yUdm9jA4myes1uiVvrwRJYSqzr1Bn24'; // set same as SECRET_TOKEN for testing (not secure in prod)
+
+        let map, userMarker, circle, isInside = null;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), { center: GEOFENCE_CENTER, zoom: 16 });
+            circle = new google.maps.Circle({ map, center: GEOFENCE_CENTER, radius: GEOFENCE_RADIUS_M, strokeWeight: 2 });
+            userMarker = new google.maps.Marker({ map, title: 'You' });
+            map.fitBounds(circle.getBounds());
+            startWatch();
+        }
+
+        function startWatch() {
+            if (!navigator.geolocation) { updateStatus('Geolocation not available'); return; }
+            navigator.geolocation.watchPosition(onPos, onErr, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+        }
+
+        function onPos(p) {
+            const lat = p.coords.latitude, lng = p.coords.longitude;
+            const latLng = new google.maps.LatLng(lat, lng);
+            userMarker.setPosition(latLng);
+
+            const distance = google.maps.geometry.spherical.computeDistanceBetween(latLng, circle.getCenter());
+            const nowInside = distance <= GEOFENCE_RADIUS_M;
+
+            if (isInside === null) { isInside = nowInside; updateStatus((isInside ? 'Initial INSIDE' : 'Initial OUTSIDE') + ` • ${Math.round(distance)} m`); }
+            else if (isInside !== nowInside) {
+                isInside = nowInside;
+                if (nowInside) fireEvent('enter', lat, lng);
+                else fireEvent('exit', lat, lng);
+            } else {
+                updateStatus((isInside ? 'Inside' : 'Outside') + ` • ${Math.round(distance)} m`);
+            }
+        }
+
+        function fireEvent(eventName, lat, lng) {
+            updateStatus(`${eventName.toUpperCase()} -> sending to server...`);
+            const payload = { event: eventName, lat, lng, ts: new Date().toISOString() };
+            fetch('/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Token': CLIENT_TOKEN },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.json())
+                .then(j => updateStatus(`${eventName.toUpperCase()} • server says inside=${j.inside} dist=${Math.round(j.distance_m)} m`))
+                .catch(err => updateStatus('error posting: ' + err));
+        }
+
+        function updateStatus(t) { document.getElementById('status').textContent = t; }
+        function onErr(e) { updateStatus('Geolocation error: ' + (e.message || e.code)); console.error(e); }
+    </script>
+
+    <!-- Load Maps JS + geometry library -->
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4yUdm9jA4myes1uiVvrwRJYSqzr1Bn24&libraries=geometry&callback=initMap"></script>
+</body>
+
+</html>

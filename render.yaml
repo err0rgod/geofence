@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: geofence-app
+    env: python
+    buildCommand: ""
+    startCommand: python app.py
+    envVars:
+      - key: GEOFENCE_CENTER_LAT
+        value: "28.458538"
+      - key: GEOFENCE_CENTER_LNG
+        value: "77.460090"
+      - key: GEOFENCE_RADIUS_M
+        value: "150"
+      - key: SECRET_TOKEN
+        value: "AIzaSyB4yUdm9jA4myes1uiVvrwRJYSqzr1Bn24"
