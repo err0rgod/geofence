@@ -6,8 +6,8 @@ app = Flask(__name__, static_folder='static')
 
 # configure via environment variables (easy for Cloud Run)
 GEOFENCE_CENTER = {
-    'lat': float(os.getenv('GEOFENCE_CENTER_LAT', '28.458538')),
-    'lng': float(os.getenv('GEOFENCE_CENTER_LNG', '77.460090'))
+    'lat': float(os.getenv('GEOFENCE_CENTER_LAT', '28.453489')),
+    'lng': float(os.getenv('GEOFENCE_CENTER_LNG', '77.495797'))
 }
 GEOFENCE_RADIUS_M = float(os.getenv('GEOFENCE_RADIUS_M', '150'))  # meters
 SECRET_TOKEN = os.getenv('SECRET_TOKEN', '')  # optional simple auth
